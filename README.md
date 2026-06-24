@@ -121,7 +121,14 @@ Response:
         "word": "example",
         "frequency": 14
       }
-    ]
+    ],
+    "cookies": {
+      "count": 8,
+      "secureCount": 5,
+      "httpOnlyCount": 3,
+      "sessionCount": 2,
+      "thirdPartyCount": 1
+    }
   }
 }
 ```
@@ -168,6 +175,7 @@ AnalyzerService
   ├── HtmlParser
   ├── TopWordsAnalyzer
   ├── TechDetector
+  ├── CookieAnalyzer
   ├── MetricsBuilder
   └── LoggingService
   ↓
@@ -192,6 +200,22 @@ Ejemplo:
 http://localhost:3001/screenshots/example-home.png
 ```
 
+## Cookies
+
+El Robot puede obtener cookies desde Puppeteer y devolver métricas agregadas dentro de `metrics.cookies`.
+
+No se devuelven nombres ni valores de cookies, solo contadores.
+
+```json
+"cookies": {
+  "count": 8,
+  "secureCount": 5,
+  "httpOnlyCount": 3,
+  "sessionCount": 2,
+  "thirdPartyCount": 1
+}
+```
+
 ## Logs
 
 El sistema debe registrar eventos en disco en:
@@ -212,4 +236,5 @@ Formato sugerido:
 
 * `topWordsLimit` y `linksLimit` tienen valores por defecto.
 * Si se envían valores mayores al máximo configurado, se aplica el máximo.
+* Las cookies se informan únicamente como métricas agregadas.
 * El Robot solo se encarga del análisis técnico del sitio.
