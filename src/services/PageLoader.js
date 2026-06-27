@@ -14,7 +14,6 @@ const UNREACHABLE_PATTERNS = [
   "net::ERR_CERT_",
   "net::ERR_SSL_",
   "net::ERR_TUNNEL_CONNECTION_FAILED",
-  "Protocol error",
   "Cannot navigate to invalid URL",
 ];
 
@@ -24,34 +23,24 @@ class PageLoader {
   }
 
   async load(page, url) {
-    if (!page || typeof page.goto !== "function") {
-      throw new Error(
-        "Invalid PageLoader argument: page must be a Puppeteer Page",
-      );
-    }
+    this._validatePage(page);
 
-    if (typeof url !== "string") {
-      throw new Error("Invalid PageLoader argument: url must be a string");
-    }
+    const normalizedUrl = this._normalizeUrl(url);
 
-    return await this._navigate(page, url);
+    return this._navigate(page, normalizedUrl);
   }
 
   async _navigate(page, url) {
-    let mainResponse = null;
-
-    page.on("response", (response) => {
-      if (mainResponse !== null) return;
-      const req = response.request();
-      if (req.resourceType() === "document") {
-        mainResponse = response;
-      }
-    });
-
     const startTime = Date.now();
 
+    let mainResponse;
+    let navigationStrategy;
+
     try {
-      await this._navigateWithFallback(page, url);
+      const result = await this._navigateWithFallback(page, url);
+
+      mainResponse = result.response;
+      navigationStrategy = result.waitUntil;
     } catch (err) {
       throw this._classifyError(err, url);
     }
@@ -60,9 +49,10 @@ class PageLoader {
 
     const finalUrl = page.url();
     const html = await page.content();
-    const documentSizeKb = +(Buffer.byteLength(html, "utf8") / 1024).toFixed(2);
-    const sslValid = this._checkSsl(finalUrl, mainResponse);
     const headers = mainResponse ? mainResponse.headers() : {};
+    const documentSizeKb = this._calculateDocumentSizeKb(html);
+    const sslValid = this._checkSsl(finalUrl, mainResponse);
+    const cookies = await this._safeGetCookies(page, finalUrl);
 
     return {
       html,
@@ -71,48 +61,92 @@ class PageLoader {
       responseTimeMs,
       documentSizeKb,
       sslValid,
+      cookies,
+      navigationStrategy,
     };
   }
 
   async _navigateWithFallback(page, url) {
-    for (let i = 0; i < NAV_WAIT_UNTIL.length; i++) {
-      const waitUntil = NAV_WAIT_UNTIL[i];
-      const isLast = i === NAV_WAIT_UNTIL.length - 1;
+    let lastError;
 
+    for (const waitUntil of NAV_WAIT_UNTIL) {
       try {
-        await page.goto(url, {
+        const response = await page.goto(url, {
           timeout: this.timeoutMs,
           waitUntil,
         });
-        return;
+
+        return {
+          response,
+          waitUntil,
+        };
       } catch (err) {
-        const isTimeout =
-          err.name === "TimeoutError" ||
-          err.message.includes("timeout") ||
-          err.message.includes("Timeout");
+        lastError = err;
 
-        if (isTimeout && !isLast) {
-          continue;
+        if (!this._isTimeoutError(err)) {
+          throw err;
         }
-
-        throw err;
       }
+    }
+
+    throw lastError;
+  }
+
+  _validatePage(page) {
+    if (!page || typeof page.goto !== "function") {
+      throw new Error(
+        "Invalid PageLoader argument: page must be a Puppeteer Page",
+      );
+    }
+  }
+
+  _normalizeUrl(url) {
+    if (typeof url !== "string") {
+      throw new SiteNotAnalyzableError(url, "URL must be a string");
+    }
+
+    const trimmedUrl = url.trim();
+
+    let parsedUrl;
+
+    try {
+      parsedUrl = new URL(trimmedUrl);
+    } catch {
+      throw new SiteNotAnalyzableError(trimmedUrl, "invalid URL");
+    }
+
+    if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+      throw new SiteNotAnalyzableError(trimmedUrl, "unsupported protocol");
+    }
+
+    return parsedUrl.toString();
+  }
+
+  _calculateDocumentSizeKb(html) {
+    return +(Buffer.byteLength(html, "utf8") / 1024).toFixed(2);
+  }
+
+  async _safeGetCookies(page, finalUrl) {
+    try {
+      return await page.browserContext().cookies(finalUrl);
+    } catch {
+      return [];
     }
   }
 
   _checkSsl(finalUrl, response) {
     try {
       const { protocol } = new URL(finalUrl);
-      if (protocol !== "https:") return false;
 
+      if (protocol !== "https:") return false;
       if (!response) return true;
 
-      const secDetails = response.securityDetails?.();
-      if (secDetails) {
-        return true;
-      }
+      const securityDetails = response.securityDetails?.();
+
+      if (securityDetails) return true;
 
       const status = response.status();
+
       return status > 0 && status < 600;
     } catch {
       return false;
@@ -122,13 +156,14 @@ class PageLoader {
   _classifyError(err, url) {
     const msg = err.message ?? "";
 
-    if (err.name === "TimeoutError" || msg.toLowerCase().includes("timeout")) {
+    if (this._isTimeoutError(err)) {
       return new TargetTimeoutError(url, this.timeoutMs);
     }
 
     for (const pattern of UNREACHABLE_PATTERNS) {
       if (msg.includes(pattern)) {
         const reason = this._friendlyReason(msg);
+
         return new SiteNotAnalyzableError(url, reason, err);
       }
     }
@@ -140,17 +175,28 @@ class PageLoader {
     );
   }
 
+  _isTimeoutError(err) {
+    const message = err.message ?? "";
+
+    return (
+      err.name === "TimeoutError" || message.toLowerCase().includes("timeout")
+    );
+  }
+
   _friendlyReason(msg) {
     if (msg.includes("ERR_NAME_NOT_RESOLVED")) return "DNS resolution failed";
     if (msg.includes("ERR_CONNECTION_REFUSED")) return "connection refused";
     if (msg.includes("ERR_CONNECTION_RESET")) return "connection reset";
     if (msg.includes("ERR_CONNECTION_TIMED_OUT")) return "connection timed out";
-    if (msg.includes("ERR_INTERNET_DISCONNECTED"))
+    if (msg.includes("ERR_INTERNET_DISCONNECTED")) {
       return "no internet connection";
+    }
     if (msg.includes("ERR_ADDRESS_UNREACHABLE")) return "address unreachable";
-    if (msg.includes("ERR_CERT_") || msg.includes("ERR_SSL_"))
+    if (msg.includes("ERR_CERT_") || msg.includes("ERR_SSL_")) {
       return "SSL/TLS certificate error";
+    }
     if (msg.includes("Cannot navigate to invalid URL")) return "invalid URL";
+
     return msg;
   }
 }

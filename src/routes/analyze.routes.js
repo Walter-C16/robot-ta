@@ -1,11 +1,8 @@
 const express = require("express");
 const { validateAnalyzeRequest } = require("../middlewares");
+const LoggingService = require("../services/LoggingService");
 
-module.exports = function analyzeRoutes({
-  analyzerService,
-  loggingService,
-  config,
-}) {
+module.exports = function analyzeRoutes({ analyzerService, config }) {
   const router = express.Router();
 
   router.post(
@@ -15,19 +12,19 @@ module.exports = function analyzeRoutes({
       try {
         const { url, options } = req.analysisRequest;
 
-        await loggingService.logIncomingAnalyzeRequest({ url });
-        await loggingService.logRobotRequest({ url });
+        await LoggingService.logIncomingAnalyzeRequest({ url });
+        await LoggingService.logRobotRequest({ url });
 
         const response = await analyzerService.analyze(url, options);
 
-        await loggingService.logRobotResponse({
+        await LoggingService.logRobotResponse({
           url,
           statusCode: 200,
         });
 
         return res.status(200).json(response);
       } catch (error) {
-        await loggingService.logError(error);
+        await LoggingService.error("ANALYZE", error);
         return next(error);
       }
     },

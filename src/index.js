@@ -1,12 +1,12 @@
 const { createApp } = require("./app");
 const config = require("./config");
+const LoggingService = require("./services/LoggingService");
 
 const app = createApp();
-const { browserManager, loggingService } = app.locals.dependencies;
+const { browserManager } = app.locals.dependencies;
 
 const server = app.listen(config.port, async () => {
-  console.log(`Robot API running on port ${config.port}`);
-  await loggingService.logSystemStart({ port: config.port });
+  await LoggingService.logSystemStart({ port: config.port });
 });
 
 async function shutdown(signal) {

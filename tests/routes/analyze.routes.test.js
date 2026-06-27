@@ -37,7 +37,7 @@ describe("Analyze Router - stubs", () => {
       logIncomingAnalyzeRequest: jest.fn().mockResolvedValue({ logged: true }),
       logRobotRequest: jest.fn().mockResolvedValue({ logged: true }),
       logRobotResponse: jest.fn().mockResolvedValue({ logged: true }),
-      logError: jest.fn().mockResolvedValue({ logged: true }),
+      error: jest.fn().mockResolvedValue({ logged: true }),
     };
 
     const app = createApp({
@@ -59,7 +59,7 @@ describe("Analyze Router - stubs", () => {
     expect(response.body).toEqual(analyzerResponse);
 
     expect(analyzerService.analyze).toHaveBeenCalledWith(
-      "https://example.com",
+      "https://example.com/",
       {
         topWordsLimit: 10,
         linksLimit: 50,

@@ -1,96 +1,123 @@
 const { BadRequestError } = require("./errors");
-const config = require("./config");
+const defaultConfig = require("./config");
+const LoggingService = require("./services/LoggingService");
 
-/**
- * STUB.
- *
- * Este middleware queda preparado para que luego se implemente validación real:
- * - validar url [x]
- * - validar topWordsLimit [x]
- * - validar linksLimit [x]
- * - aplicar defaults [x]
- * - aplicar máximos [x]
- *
- * Por ahora solo arma req.analysisRequest para que el router y AnalyzerService funcionen.
- */
-function validateAnalyzeRequest(conf) {
+function validateAnalyzeRequest(conf = defaultConfig) {
   return (req, res, next) => {
-    const { url, options = {} } = req.body || {};
+    try {
+      const body = req.body || {};
+      const { url } = body;
+      const options = body.options ?? {};
 
-    console.log(config.defaultTopWordsLimit);
-    console.log(config.maxTopWordsLimit);
-    console.log(config.defaultLinksLimit);
-    console.log(config.maxLinksLimit);
+      if (url === undefined) {
+        throw new BadRequestError("URL not provided");
+      }
 
-    // devolver error si no se envía ninguna URL
-    if (url === undefined) throw new BadRequestError("URL not provided");
+      if (typeof url !== "string") {
+        throw new BadRequestError("URL must be a string");
+      }
 
-    // validar url
-    if (typeof url !== "string")
-      throw new BadRequestError("URL must be a string");
-    if (!validateUrl(url)) throw new BadRequestError("URL must be a valid URL");
+      const normalizedUrl = normalizeUrl(url);
 
-    // validar topWordsLimit y linksLimit si existen
-    if (options.topWordsLimit !== undefined) {
-      if (typeof options.topWordsLimit !== "number")
-        throw new BadRequestError("topWordsLimit must be a positive integer");
-      if (options.topWordsLimit < 1)
-        throw new BadRequestError("topWordsLimit must be a positive integer");
+      if (!isPlainObject(options)) {
+        throw new BadRequestError("options must be an object");
+      }
+
+      const topWordsLimit = normalizePositiveIntegerOption({
+        name: "topWordsLimit",
+        value: options.topWordsLimit,
+        defaultValue: conf.defaultTopWordsLimit,
+        maxValue: conf.maxTopWordsLimit,
+      });
+
+      const linksLimit = normalizePositiveIntegerOption({
+        name: "linksLimit",
+        value: options.linksLimit,
+        defaultValue: conf.defaultLinksLimit,
+        maxValue: conf.maxLinksLimit,
+      });
+
+      const normalizedOptions = {
+        topWordsLimit,
+        linksLimit,
+      };
+
+      req.analysisRequest = {
+        url: normalizedUrl,
+        options: normalizedOptions,
+      };
+
+      void LoggingService.logIncomingAnalyzeRequest({
+        url: normalizedUrl,
+      });
+
+      return next();
+    } catch (error) {
+      return next(error);
     }
-    if (options.linksLimit !== undefined) {
-      if (typeof options.linksLimit !== "number")
-        throw new BadRequestError("linksLimit must be a positive integer");
-      if (options.linksLimit < 1)
-        throw new BadRequestError("linksLimit must be a positive integer");
-    }
-
-    // aplicar valores por defecto
-    options.topWordsLimit =
-      options.topWordsLimit || config.defaultTopWordsLimit;
-    options.linksLimit = options.linksLimit || config.defaultLinksLimit;
-
-    // aplicar máximos
-    options.topWordsLimit = Math.min(
-      options.topWordsLimit,
-      config.maxTopWordsLimit,
-    );
-    options.linksLimit = Math.min(options.linksLimit, config.maxLinksLimit);
-
-    console.log(JSON.stringify({ url, options }));
-
-    // armar req.analysisRequest para el router y AnalyzerService
-    req.analysisRequest = {
-      url,
-      options,
-    };
-
-    return next();
   };
 }
 
-// función utilitaria para validar la URL
-function validateUrl(url) {
+function normalizeUrl(url) {
+  const trimmedUrl = url.trim();
+
+  let parsedUrl;
+
   try {
-    new URL(url);
-    return true;
-  } catch (err) {
-    return false;
+    parsedUrl = new URL(trimmedUrl);
+  } catch {
+    throw new BadRequestError("URL must be a valid URL");
   }
+
+  if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+    throw new BadRequestError("URL protocol must be http or https");
+  }
+
+  return parsedUrl.toString();
 }
 
-/**
- * STUB.
- *
- * Error handler mínimo para que Express no rompa.
- * Luego se puede ampliar con manejo de 400, 422, 500, 503 y 504.
- */
+function normalizePositiveIntegerOption({
+  name,
+  value,
+  defaultValue,
+  maxValue,
+}) {
+  if (value === undefined) {
+    return defaultValue;
+  }
+
+  if (!Number.isInteger(value) || value < 1) {
+    throw new BadRequestError(`${name} must be a positive integer`);
+  }
+
+  return Math.min(value, maxValue);
+}
+
+function isPlainObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
 function globalErrorHandler(error, req, res, next) {
   const statusCode = error.statusCode || 500;
 
-  console.log(error);
+  const responseMessage = error.statusCode
+    ? error.message
+    : "Internal server error";
+
+  if (statusCode >= 500) {
+    void LoggingService.error("ERROR_RESPONSE", error);
+  } else {
+    void LoggingService.warn("REQUEST_FAILED", error.message);
+  }
+
+  void LoggingService.logRobotResponse({
+    url:
+      req.analysisRequest?.url || req.body?.url || req.originalUrl || req.url,
+    statusCode,
+  });
 
   return res.status(statusCode).json({
-    error: error.statusCode ? error.message : "Internal server error",
+    error: responseMessage,
   });
 }
 

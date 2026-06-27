@@ -10,6 +10,7 @@ const PageLoader = require("./services/PageLoader");
 const HtmlParser = require("./services/HtmlParser");
 const TopWordsAnalyzer = require("./services/TopWordsAnalyzer");
 const TechDetector = require("./services/TechDetector");
+const CookieAnalyzer = require("./services/CookieAnalyzer");
 const MetricsBuilder = require("./services/MetricsBuilder");
 const ScreenshotService = require("./services/ScreenshotService");
 const LocalScreenshotStorage = require("./services/LocalScreenshotStorage");
@@ -25,6 +26,7 @@ function createDefaultDependencies() {
   const topWordsAnalyzer = new TopWordsAnalyzer();
   const techDetector = new TechDetector();
   const metricsBuilder = new MetricsBuilder();
+  const cookieAnalyzer = new CookieAnalyzer();
 
   const screenshotStorage = new LocalScreenshotStorage({
     baseUrl: config.baseUrl,
@@ -46,6 +48,7 @@ function createDefaultDependencies() {
     htmlParser,
     topWordsAnalyzer,
     techDetector,
+    cookieAnalyzer,
     metricsBuilder,
     loggingService,
   });

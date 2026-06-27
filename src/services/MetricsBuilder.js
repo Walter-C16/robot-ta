@@ -5,7 +5,7 @@
  * Por ahora solo junta datos que vienen de PageLoader, HtmlParser y TopWordsAnalyzer.
  */
 class MetricsBuilder {
-  build({ pageData, parsed, topWords }) {
+  build({ pageData, parsed, topWords, cookieMetrics = {} }) {
     return {
       responseTimeMs: pageData.responseTimeMs,
       documentSizeKb: pageData.documentSizeKb,
@@ -15,6 +15,7 @@ class MetricsBuilder {
       paragraphCount: parsed.paragraphCount,
       wordCount: parsed.wordCount,
       topWords,
+      cookies: cookieMetrics,
     };
   }
 }

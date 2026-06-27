@@ -9,15 +9,26 @@ describe("AnalyzerService", () => {
       releasePage: jest.fn().mockResolvedValue(undefined),
     };
 
+    const pageData = {
+      html: "<html><body>Example text</body></html>",
+      finalUrl: "https://example.com",
+      headers: { server: "stub-server" },
+      responseTimeMs: 1200,
+      documentSizeKb: 56.4,
+      sslValid: true,
+      cookies: [
+        {
+          name: "session",
+          domain: "example.com",
+          secure: true,
+          httpOnly: true,
+          expires: -1,
+        },
+      ],
+    };
+
     const pageLoader = {
-      load: jest.fn().mockResolvedValue({
-        html: "<html><body>Example text</body></html>",
-        finalUrl: "https://example.com",
-        headers: { server: "stub-server" },
-        responseTimeMs: 1200,
-        documentSizeKb: 56.4,
-        sslValid: true,
-      }),
+      load: jest.fn().mockResolvedValue(pageData),
     };
 
     const screenshotService = {
@@ -56,6 +67,16 @@ describe("AnalyzerService", () => {
       }),
     };
 
+    const cookieAnalyzer = {
+      analyze: jest.fn().mockReturnValue({
+        count: 1,
+        secureCount: 1,
+        httpOnlyCount: 1,
+        sessionCount: 1,
+        thirdPartyCount: 0,
+      }),
+    };
+
     const metricsBuilder = {
       build: jest.fn().mockReturnValue({
         responseTimeMs: 1200,
@@ -66,6 +87,13 @@ describe("AnalyzerService", () => {
         paragraphCount: 3,
         wordCount: 4,
         topWords: [{ word: "example", frequency: 2 }],
+        cookies: {
+          count: 1,
+          secureCount: 1,
+          httpOnlyCount: 1,
+          sessionCount: 1,
+          thirdPartyCount: 0,
+        },
       }),
     };
 
@@ -78,6 +106,7 @@ describe("AnalyzerService", () => {
       htmlParser,
       topWordsAnalyzer,
       techDetector,
+      cookieAnalyzer,
       metricsBuilder,
       loggingService,
     });
@@ -85,12 +114,14 @@ describe("AnalyzerService", () => {
     return {
       service,
       page,
+      pageData,
       browserManager,
       pageLoader,
       screenshotService,
       htmlParser,
       topWordsAnalyzer,
       techDetector,
+      cookieAnalyzer,
       metricsBuilder,
     };
   }
@@ -99,19 +130,23 @@ describe("AnalyzerService", () => {
     const {
       service,
       page,
+      pageData,
       browserManager,
       pageLoader,
       screenshotService,
       htmlParser,
       topWordsAnalyzer,
       techDetector,
+      cookieAnalyzer,
       metricsBuilder,
     } = createService();
 
-    const response = await service.analyze("https://example.com", {
+    const options = {
       topWordsLimit: 2,
       linksLimit: 1,
-    });
+    };
+
+    const response = await service.analyze("https://example.com", options);
 
     expect(response).toEqual({
       url: "https://example.com",
@@ -136,33 +171,67 @@ describe("AnalyzerService", () => {
         paragraphCount: 3,
         wordCount: 4,
         topWords: [{ word: "example", frequency: 2 }],
+        cookies: {
+          count: 1,
+          secureCount: 1,
+          httpOnlyCount: 1,
+          sessionCount: 1,
+          thirdPartyCount: 0,
+        },
       },
     });
 
     expect(browserManager.acquirePage).toHaveBeenCalledTimes(1);
+
     expect(pageLoader.load).toHaveBeenCalledWith(page, "https://example.com");
+
     expect(screenshotService.capture).toHaveBeenCalledWith(
       page,
       expect.any(String),
     );
+
     expect(htmlParser.parse).toHaveBeenCalledWith(
-      "<html><body>Example text</body></html>",
-      "https://example.com",
-      { topWordsLimit: 2, linksLimit: 1 },
+      pageData.html,
+      pageData.finalUrl,
+      options,
     );
+
     expect(topWordsAnalyzer.getTopWords).toHaveBeenCalledWith(
       "example text example",
       2,
     );
-    expect(techDetector.detect).toHaveBeenCalledWith({
-      html: "<html><body>Example text</body></html>",
-      finalUrl: "https://example.com",
-      headers: { server: "stub-server" },
-      responseTimeMs: 1200,
-      documentSizeKb: 56.4,
-      sslValid: true,
+
+    expect(techDetector.detect).toHaveBeenCalledWith(pageData);
+
+    expect(cookieAnalyzer.analyze).toHaveBeenCalledWith(
+      pageData.cookies,
+      pageData.finalUrl,
+    );
+
+    expect(metricsBuilder.build).toHaveBeenCalledWith({
+      pageData,
+      parsed: {
+        identity: {
+          title: "Example Site",
+          description: "Example description",
+        },
+        links: ["https://example.com/contact"],
+        linkCount: 1,
+        imageCount: 2,
+        paragraphCount: 3,
+        wordCount: 4,
+        visibleText: "example text example",
+      },
+      topWords: [{ word: "example", frequency: 2 }],
+      cookieMetrics: {
+        count: 1,
+        secureCount: 1,
+        httpOnlyCount: 1,
+        sessionCount: 1,
+        thirdPartyCount: 0,
+      },
     });
-    expect(metricsBuilder.build).toHaveBeenCalled();
+
     expect(browserManager.releasePage).toHaveBeenCalledWith(page);
   });
 

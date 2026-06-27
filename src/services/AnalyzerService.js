@@ -1,4 +1,5 @@
 const { v4: uuid } = require("uuid");
+const LoggingService = require("./LoggingService");
 
 /**
  * Este es el único servicio con lógica de integración real.
@@ -12,6 +13,7 @@ class AnalyzerService {
     htmlParser,
     topWordsAnalyzer,
     techDetector,
+    cookieAnalyzer,
     metricsBuilder,
     loggingService,
   }) {
@@ -21,6 +23,7 @@ class AnalyzerService {
     this.htmlParser = htmlParser;
     this.topWordsAnalyzer = topWordsAnalyzer;
     this.techDetector = techDetector;
+    this.cookieAnalyzer = cookieAnalyzer;
     this.metricsBuilder = metricsBuilder;
     this.loggingService = loggingService;
   }
@@ -47,10 +50,16 @@ class AnalyzerService {
 
       const technologies = await this.techDetector.detect(pageData);
 
+      const cookieMetrics = this.cookieAnalyzer.analyze(
+        pageData.cookies,
+        pageData.finalUrl,
+      );
+
       const metrics = this.metricsBuilder.build({
         pageData,
         parsed,
         topWords,
+        cookieMetrics,
       });
 
       return {
@@ -61,6 +70,9 @@ class AnalyzerService {
         technologies,
         metrics,
       };
+    } catch (error) {
+      await LoggingService.error("ANALYZER_SERVICE", error);
+      throw error;
     } finally {
       await this.browserManager.releasePage(page);
     }
