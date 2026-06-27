@@ -15,7 +15,7 @@ class ScreenshotService {
 
     const screenshotUrl = await this.storage.save(
       Buffer.from("STUB_SCREENSHOT"),
-      filename
+      filename,
     );
 
     return [screenshotUrl];

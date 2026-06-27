@@ -5,8 +5,8 @@ describe("AnalyzerService", () => {
     const page = { id: "stub-page" };
 
     const browserManager = {
-      getPage: jest.fn().mockResolvedValue(page),
-      closePage: jest.fn().mockResolvedValue(undefined)
+      acquirePage: jest.fn().mockResolvedValue(page),
+      releasePage: jest.fn().mockResolvedValue(undefined),
     };
 
     const pageLoader = {
@@ -16,35 +16,35 @@ describe("AnalyzerService", () => {
         headers: { server: "stub-server" },
         responseTimeMs: 1200,
         documentSizeKb: 56.4,
-        sslValid: true
-      })
+        sslValid: true,
+      }),
     };
 
     const screenshotService = {
       capture: jest
         .fn()
-        .mockResolvedValue(["http://localhost:3001/screenshots/stub.png"])
+        .mockResolvedValue(["http://localhost:3001/screenshots/stub.png"]),
     };
 
     const htmlParser = {
       parse: jest.fn().mockReturnValue({
         identity: {
           title: "Example Site",
-          description: "Example description"
+          description: "Example description",
         },
         links: ["https://example.com/contact"],
         linkCount: 1,
         imageCount: 2,
         paragraphCount: 3,
         wordCount: 4,
-        visibleText: "example text example"
-      })
+        visibleText: "example text example",
+      }),
     };
 
     const topWordsAnalyzer = {
-      getTopWords: jest.fn().mockReturnValue([
-        { word: "example", frequency: 2 }
-      ])
+      getTopWords: jest
+        .fn()
+        .mockReturnValue([{ word: "example", frequency: 2 }]),
     };
 
     const techDetector = {
@@ -52,8 +52,8 @@ describe("AnalyzerService", () => {
         server: "cloudflare",
         language: "HTML Estático / Desconocido",
         frontendFramework: "React",
-        detected: ["React", "Cloudflare"]
-      })
+        detected: ["React", "Cloudflare"],
+      }),
     };
 
     const metricsBuilder = {
@@ -65,8 +65,8 @@ describe("AnalyzerService", () => {
         imageCount: 2,
         paragraphCount: 3,
         wordCount: 4,
-        topWords: [{ word: "example", frequency: 2 }]
-      })
+        topWords: [{ word: "example", frequency: 2 }],
+      }),
     };
 
     const loggingService = {};
@@ -79,7 +79,7 @@ describe("AnalyzerService", () => {
       topWordsAnalyzer,
       techDetector,
       metricsBuilder,
-      loggingService
+      loggingService,
     });
 
     return {
@@ -91,7 +91,7 @@ describe("AnalyzerService", () => {
       htmlParser,
       topWordsAnalyzer,
       techDetector,
-      metricsBuilder
+      metricsBuilder,
     };
   }
 
@@ -105,19 +105,19 @@ describe("AnalyzerService", () => {
       htmlParser,
       topWordsAnalyzer,
       techDetector,
-      metricsBuilder
+      metricsBuilder,
     } = createService();
 
     const response = await service.analyze("https://example.com", {
       topWordsLimit: 2,
-      linksLimit: 1
+      linksLimit: 1,
     });
 
     expect(response).toEqual({
       url: "https://example.com",
       identity: {
         title: "Example Site",
-        description: "Example description"
+        description: "Example description",
       },
       screenshots: ["http://localhost:3001/screenshots/stub.png"],
       links: ["https://example.com/contact"],
@@ -125,7 +125,7 @@ describe("AnalyzerService", () => {
         server: "cloudflare",
         language: "HTML Estático / Desconocido",
         frontendFramework: "React",
-        detected: ["React", "Cloudflare"]
+        detected: ["React", "Cloudflare"],
       },
       metrics: {
         responseTimeMs: 1200,
@@ -135,21 +135,24 @@ describe("AnalyzerService", () => {
         imageCount: 2,
         paragraphCount: 3,
         wordCount: 4,
-        topWords: [{ word: "example", frequency: 2 }]
-      }
+        topWords: [{ word: "example", frequency: 2 }],
+      },
     });
 
-    expect(browserManager.getPage).toHaveBeenCalledTimes(1);
+    expect(browserManager.acquirePage).toHaveBeenCalledTimes(1);
     expect(pageLoader.load).toHaveBeenCalledWith(page, "https://example.com");
-    expect(screenshotService.capture).toHaveBeenCalledWith(page, expect.any(String));
+    expect(screenshotService.capture).toHaveBeenCalledWith(
+      page,
+      expect.any(String),
+    );
     expect(htmlParser.parse).toHaveBeenCalledWith(
       "<html><body>Example text</body></html>",
       "https://example.com",
-      { topWordsLimit: 2, linksLimit: 1 }
+      { topWordsLimit: 2, linksLimit: 1 },
     );
     expect(topWordsAnalyzer.getTopWords).toHaveBeenCalledWith(
       "example text example",
-      2
+      2,
     );
     expect(techDetector.detect).toHaveBeenCalledWith({
       html: "<html><body>Example text</body></html>",
@@ -157,26 +160,21 @@ describe("AnalyzerService", () => {
       headers: { server: "stub-server" },
       responseTimeMs: 1200,
       documentSizeKb: 56.4,
-      sslValid: true
+      sslValid: true,
     });
     expect(metricsBuilder.build).toHaveBeenCalled();
-    expect(browserManager.closePage).toHaveBeenCalledWith(page);
+    expect(browserManager.releasePage).toHaveBeenCalledWith(page);
   });
 
   test("cierra la página aunque ocurra un error", async () => {
-    const {
-      service,
-      page,
-      browserManager,
-      pageLoader
-    } = createService();
+    const { service, page, browserManager, pageLoader } = createService();
 
     pageLoader.load.mockRejectedValue(new Error("Unexpected failure"));
 
-    await expect(
-      service.analyze("https://example.com")
-    ).rejects.toThrow("Unexpected failure");
+    await expect(service.analyze("https://example.com")).rejects.toThrow(
+      "Unexpected failure",
+    );
 
-    expect(browserManager.closePage).toHaveBeenCalledWith(page);
+    expect(browserManager.releasePage).toHaveBeenCalledWith(page);
   });
 });

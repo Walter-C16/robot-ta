@@ -12,11 +12,7 @@ class TechDetector {
       server: "cloudflare",
       language: "HTML Estático / Desconocido",
       frontendFramework: "React",
-      detected: [
-        "React",
-        "Cloudflare",
-        "Google Analytics"
-      ]
+      detected: ["React", "Cloudflare", "Google Analytics"],
     };
   }
 }

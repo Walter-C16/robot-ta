@@ -15,7 +15,7 @@ const config = {
 
   screenshotsDir: process.env.SCREENSHOTS_DIR || "./screenshots",
   logsDir: process.env.LOGS_DIR || "./logs",
-  logFileName: process.env.LOG_FILE_NAME || "registro_bunker.txt"
+  logFileName: process.env.LOG_FILE_NAME || "registro_bunker.txt",
 };
 
 module.exports = config;

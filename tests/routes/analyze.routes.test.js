@@ -7,7 +7,7 @@ describe("Analyze Router - stubs", () => {
       url: "https://example.com",
       identity: {
         title: "Example Site",
-        description: "Example description"
+        description: "Example description",
       },
       screenshots: ["http://localhost:3001/screenshots/stub.png"],
       links: ["https://example.com/contact"],
@@ -15,7 +15,7 @@ describe("Analyze Router - stubs", () => {
         server: "cloudflare",
         language: "HTML Estático / Desconocido",
         frontendFramework: "React",
-        detected: ["React"]
+        detected: ["React"],
       },
       metrics: {
         responseTimeMs: 1200,
@@ -25,24 +25,24 @@ describe("Analyze Router - stubs", () => {
         imageCount: 2,
         paragraphCount: 3,
         wordCount: 4,
-        topWords: [{ word: "example", frequency: 2 }]
-      }
+        topWords: [{ word: "example", frequency: 2 }],
+      },
     };
 
     const analyzerService = {
-      analyze: jest.fn().mockResolvedValue(analyzerResponse)
+      analyze: jest.fn().mockResolvedValue(analyzerResponse),
     };
 
     const loggingService = {
       logIncomingAnalyzeRequest: jest.fn().mockResolvedValue({ logged: true }),
       logRobotRequest: jest.fn().mockResolvedValue({ logged: true }),
       logRobotResponse: jest.fn().mockResolvedValue({ logged: true }),
-      logError: jest.fn().mockResolvedValue({ logged: true })
+      logError: jest.fn().mockResolvedValue({ logged: true }),
     };
 
     const app = createApp({
       analyzerService,
-      loggingService
+      loggingService,
     });
 
     const response = await request(app)
@@ -51,8 +51,8 @@ describe("Analyze Router - stubs", () => {
         url: "https://example.com",
         options: {
           topWordsLimit: 10,
-          linksLimit: 50
-        }
+          linksLimit: 50,
+        },
       });
 
     expect(response.status).toBe(200);
@@ -62,8 +62,8 @@ describe("Analyze Router - stubs", () => {
       "https://example.com",
       {
         topWordsLimit: 10,
-        linksLimit: 50
-      }
+        linksLimit: 50,
+      },
     );
   });
 });

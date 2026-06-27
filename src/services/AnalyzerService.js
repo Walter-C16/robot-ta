@@ -13,7 +13,7 @@ class AnalyzerService {
     topWordsAnalyzer,
     techDetector,
     metricsBuilder,
-    loggingService
+    loggingService,
   }) {
     this.browserManager = browserManager;
     this.pageLoader = pageLoader;
@@ -27,7 +27,7 @@ class AnalyzerService {
 
   async analyze(url, options = {}) {
     const scanId = uuid();
-    const page = await this.browserManager.getPage();
+    const page = await this.browserManager.acquirePage();
 
     try {
       const pageData = await this.pageLoader.load(page, url);
@@ -37,12 +37,12 @@ class AnalyzerService {
       const parsed = this.htmlParser.parse(
         pageData.html,
         pageData.finalUrl,
-        options
+        options,
       );
 
       const topWords = this.topWordsAnalyzer.getTopWords(
         parsed.visibleText,
-        options.topWordsLimit
+        options.topWordsLimit,
       );
 
       const technologies = await this.techDetector.detect(pageData);
@@ -50,7 +50,7 @@ class AnalyzerService {
       const metrics = this.metricsBuilder.build({
         pageData,
         parsed,
-        topWords
+        topWords,
       });
 
       return {
@@ -59,10 +59,10 @@ class AnalyzerService {
         screenshots,
         links: parsed.links,
         technologies,
-        metrics
+        metrics,
       };
     } finally {
-      await this.browserManager.closePage(page);
+      await this.browserManager.releasePage(page);
     }
   }
 }

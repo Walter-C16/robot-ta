@@ -27,16 +27,16 @@ function createDefaultDependencies() {
   const metricsBuilder = new MetricsBuilder();
 
   const screenshotStorage = new LocalScreenshotStorage({
-    baseUrl: config.baseUrl
+    baseUrl: config.baseUrl,
   });
 
   const screenshotService = new ScreenshotService({
-    storage: screenshotStorage
+    storage: screenshotStorage,
   });
 
   const loggingService = new LoggingService({
     logsDir: config.logsDir,
-    logFileName: config.logFileName
+    logFileName: config.logFileName,
   });
 
   const analyzerService = new AnalyzerService({
@@ -47,13 +47,13 @@ function createDefaultDependencies() {
     topWordsAnalyzer,
     techDetector,
     metricsBuilder,
-    loggingService
+    loggingService,
   });
 
   return {
     browserManager,
     analyzerService,
-    loggingService
+    loggingService,
   };
 }
 
@@ -61,7 +61,7 @@ function createApp(overrides = {}) {
   const dependencies = {
     ...createDefaultDependencies(),
     ...overrides,
-    config
+    config,
   };
 
   const app = express();
@@ -80,5 +80,5 @@ function createApp(overrides = {}) {
 }
 
 module.exports = {
-  createApp
+  createApp,
 };

@@ -12,17 +12,14 @@ class HtmlParser {
     return {
       identity: {
         title: "Example Site",
-        description: "Example description"
+        description: "Example description",
       },
-      links: [
-        `${baseUrl}/contact`,
-        `${baseUrl}/about`
-      ],
+      links: [`${baseUrl}/contact`, `${baseUrl}/about`],
       linkCount: 2,
       imageCount: 1,
       paragraphCount: 2,
       wordCount: 12,
-      visibleText: "example service example target analyzer"
+      visibleText: "example service example target analyzer",
     };
   }
 }

@@ -18,7 +18,7 @@ class LoggingService {
     return {
       logged: true,
       event: "SYSTEM_START",
-      port
+      port,
     };
   }
 
@@ -26,7 +26,7 @@ class LoggingService {
     return {
       logged: true,
       event: "REQUEST_RECEIVED",
-      url
+      url,
     };
   }
 
@@ -34,7 +34,7 @@ class LoggingService {
     return {
       logged: true,
       event: "ROBOT_REQUEST_SENT",
-      url
+      url,
     };
   }
 
@@ -43,7 +43,7 @@ class LoggingService {
       logged: true,
       event: "ROBOT_RESPONSE_RECEIVED",
       url,
-      statusCode
+      statusCode,
     };
   }
 
@@ -51,7 +51,7 @@ class LoggingService {
     return {
       logged: true,
       event: "ERROR",
-      message: error.message
+      message: error.message,
     };
   }
 }

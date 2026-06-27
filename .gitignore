@@ -7,3 +7,6 @@ screenshots/*
 logs/*
 !logs/.gitkeep
 .idea
+package-lock.json
+screenshots/
+logs/

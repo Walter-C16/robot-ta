@@ -14,7 +14,7 @@ class MetricsBuilder {
       imageCount: parsed.imageCount,
       paragraphCount: parsed.paragraphCount,
       wordCount: parsed.wordCount,
-      topWords
+      topWords,
     };
   }
 }

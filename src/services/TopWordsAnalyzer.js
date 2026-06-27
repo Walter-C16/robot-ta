@@ -13,7 +13,7 @@ class TopWordsAnalyzer {
     return [
       { word: "example", frequency: 2 },
       { word: "service", frequency: 1 },
-      { word: "target", frequency: 1 }
+      { word: "target", frequency: 1 },
     ];
   }
 }
