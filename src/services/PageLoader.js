@@ -1,4 +1,3 @@
-const BrowserManager = require("./BrowserManager");
 const { TargetTimeoutError, SiteNotAnalyzableError } = require("../errors");
 
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -24,33 +23,18 @@ class PageLoader {
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
-  async load(url) {
-    this._validateUrl(url);
-
-    const manager = BrowserManager.getInstance();
-    const page = await manager.acquirePage();
-
-    try {
-      return await this._navigate(page, url);
-    } finally {
-      await manager.releasePage(page);
-    }
-  }
-
-  _validateUrl(url) {
-    let parsed;
-    try {
-      parsed = new URL(url);
-    } catch {
-      throw new SiteNotAnalyzableError(url, "invalid URL format");
-    }
-
-    if (!["http:", "https:"].includes(parsed.protocol)) {
-      throw new SiteNotAnalyzableError(
-        url,
-        `unsupported protocol "${parsed.protocol}"`,
+  async load(page, url) {
+    if (!page || typeof page.goto !== "function") {
+      throw new Error(
+        "Invalid PageLoader argument: page must be a Puppeteer Page",
       );
     }
+
+    if (typeof url !== "string") {
+      throw new Error("Invalid PageLoader argument: url must be a string");
+    }
+
+    return await this._navigate(page, url);
   }
 
   async _navigate(page, url) {

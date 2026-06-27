@@ -1,12 +1,17 @@
 {
-  "name": "target-analyzer-robot-analyzer-only",
+  "name": "target-analyzer-robot",
   "version": "1.2.0",
-  "description": "Target Analyzer Robot API - solo AnalyzerService implementado; resto en stubs.",
+  "description": "Target Analyzer Robot API",
   "main": "src/index.js",
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "prepare": "husky",
+    "format": "prettier --write \"**/*.js\""
+  },
+  "lint-staged": {
+    "*.js": "prettier --write"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -18,9 +23,11 @@
     "@eslint/js": "^10.0.1",
     "eslint": "^10.6.0",
     "globals": "^17.7.0",
+    "husky": "^9.1.7",
     "jest": "^29.7.0",
+    "lint-staged": "^17.0.8",
     "nodemon": "^3.1.0",
-    "prettier": "3.8.5",
+    "prettier": "^3.8.5",
     "supertest": "^7.0.0"
   }
 }
