@@ -1,8 +1,17 @@
 const fs = require("fs/promises");
 const path = require("path");
+const ScreenshotStorage = require("./ScreenshotStorage");
 
-class LocalScreenshotStorage {
+/**
+ * Implementación local del almacenamiento de screenshots.
+ *
+ * Guarda las imágenes en una carpeta del proyecto y devuelve
+ * una URL pública para que puedan ser consumidas por el frontend.
+ */
+class LocalScreenshotStorage extends ScreenshotStorage {
   constructor(options = {}) {
+    super();
+
     this.screenshotsDir =
       options.screenshotsDir ?? process.env.SCREENSHOTS_DIR ?? "./screenshots";
 
@@ -12,8 +21,15 @@ class LocalScreenshotStorage {
     this.publicPath = options.publicPath ?? "/screenshots";
   }
 
-  async save(buffer, filename) {
-    if (!buffer) {
+  /**
+   * Guarda el buffer de imagen en disco y devuelve la URL pública.
+   *
+   * @param {Buffer} imageBuffer Imagen generada por Puppeteer.
+   * @param {string} filename Nombre del archivo.
+   * @returns {Promise<string>} URL pública del screenshot.
+   */
+  async save(imageBuffer, filename) {
+    if (!imageBuffer) {
       throw new Error("Screenshot buffer is required");
     }
 
@@ -26,13 +42,14 @@ class LocalScreenshotStorage {
     const filePath = path.join(dirPath, safeFilename);
 
     await fs.mkdir(dirPath, { recursive: true });
-    await fs.writeFile(filePath, buffer);
+    await fs.writeFile(filePath, imageBuffer);
 
     return this._buildPublicUrl(safeFilename);
   }
 
   _buildPublicUrl(filename) {
     const normalizedBaseUrl = this.baseUrl.replace(/\/$/, "");
+
     const normalizedPublicPath = this.publicPath.startsWith("/")
       ? this.publicPath
       : `/${this.publicPath}`;
