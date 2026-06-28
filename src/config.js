@@ -13,7 +13,7 @@ const config = {
   defaultLinksLimit: getNumber(process.env.DEFAULT_LINKS_LIMIT, 50),
   maxLinksLimit: getNumber(process.env.MAX_LINKS_LIMIT, 200),
 
-  screenshotsDir: process.env.SCREENSHOTS_DIR || "./screenshots",
+  screenshotsDir: process.env.SCREENSHOTS_DIR ?? "./screenshots",
   logsDir: process.env.LOGS_DIR || "./logs",
   logFileName: process.env.LOG_FILE_NAME || "registro_bunker.txt",
 };

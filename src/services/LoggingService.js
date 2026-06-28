@@ -21,6 +21,20 @@ class LoggingService {
     return path.resolve(this.logsDir, this.fileName);
   }
 
+  static configure({
+    logsDir,
+    fileName,
+    level,
+    consoleEnabled,
+    fileEnabled,
+  } = {}) {
+    if (logsDir !== undefined) this.logsDir = logsDir;
+    if (fileName !== undefined) this.fileName = fileName;
+    if (level !== undefined) this.level = level;
+    if (consoleEnabled !== undefined) this.consoleEnabled = consoleEnabled;
+    if (fileEnabled !== undefined) this.fileEnabled = fileEnabled;
+  }
+
   static async debug(event, message) {
     return this._write("DEBUG", event, message);
   }
@@ -56,42 +70,56 @@ class LoggingService {
     );
   }
 
+  static async logError(error, event = "ERROR") {
+    const message = error?.stack || error?.message || String(error);
+
+    return this.error(event, message);
+  }
+
   static async _write(level, event, message) {
     if (!this._shouldLog(level)) return false;
 
     const line = this._formatLine(level, event, message);
 
+    let written = false;
+
     if (this.consoleEnabled) {
       this._writeToConsole(level, line);
+      written = true;
     }
 
     if (this.fileEnabled) {
-      await this._writeToFile(line);
+      const fileWritten = await this._writeToFile(line);
+      written = written || fileWritten;
     }
 
-    return true;
+    return written;
   }
 
   static _writeToConsole(level, line) {
+    const cleanLine = line.trim();
+
     if (level === "ERROR") {
-      console.error(line.trim());
+      console.error(cleanLine);
       return;
     }
 
     if (level === "WARN") {
-      console.warn(line.trim());
+      console.warn(cleanLine);
       return;
     }
 
-    console.log(line.trim());
+    console.log(cleanLine);
   }
 
   static async _writeToFile(line) {
     try {
       await fs.mkdir(this.logsDir, { recursive: true });
       await fs.appendFile(this.filePath, line, "utf8");
+
+      return true;
     } catch {
-      // No se corta el flujo principal si falla el log
+      return false;
     }
   }
 
@@ -107,7 +135,7 @@ class LoggingService {
     const timestamp = this._getTimestamp();
     const safeLevel = this._sanitize(level || "INFO");
     const safeEvent = this._sanitize(event || "UNKNOWN");
-    const safeMessage = this._sanitize(message || "");
+    const safeMessage = this._sanitizeMessage(message || "");
 
     return `[${timestamp}] [${safeLevel}] [${safeEvent}] ${safeMessage}\n`;
   }
@@ -130,6 +158,10 @@ class LoggingService {
   }
 
   static _sanitize(value) {
+    return String(value).replace(/\s+/g, " ").trim();
+  }
+
+  static _sanitizeMessage(value) {
     return String(value).replace(/\s+/g, " ").trim();
   }
 }

@@ -1,9 +1,7 @@
 const { v4: uuid } = require("uuid");
-const LoggingService = require("./LoggingService");
 
 /**
- * Este es el único servicio con lógica de integración real.
- * Su responsabilidad es coordinar todos los servicios y armar él response final.
+ * Coordina el análisis completo y arma el response final.
  */
 class AnalyzerService {
   constructor({
@@ -15,7 +13,6 @@ class AnalyzerService {
     techDetector,
     cookieAnalyzer,
     metricsBuilder,
-    loggingService,
   }) {
     this.browserManager = browserManager;
     this.pageLoader = pageLoader;
@@ -25,7 +22,6 @@ class AnalyzerService {
     this.techDetector = techDetector;
     this.cookieAnalyzer = cookieAnalyzer;
     this.metricsBuilder = metricsBuilder;
-    this.loggingService = loggingService;
   }
 
   async analyze(url, options = {}) {
@@ -70,9 +66,6 @@ class AnalyzerService {
         technologies,
         metrics,
       };
-    } catch (error) {
-      await LoggingService.error("ANALYZER_SERVICE", error);
-      throw error;
     } finally {
       await this.browserManager.releasePage(page);
     }

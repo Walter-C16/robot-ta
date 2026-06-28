@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 
 const config = require("./config");
 const { globalErrorHandler } = require("./middlewares");
@@ -18,27 +19,31 @@ const LoggingService = require("./services/LoggingService");
 
 const analyzeRoutes = require("./routes/analyze.routes");
 const healthRoutes = require("./routes/health.routes");
+const screenshotsRoutes = require("./routes/screenshots.routes");
 
 function createDefaultDependencies() {
-  const browserManager = new BrowserManager();
+  const browserManager = BrowserManager.getInstance();
+
   const pageLoader = new PageLoader();
   const htmlParser = new HtmlParser();
   const topWordsAnalyzer = new TopWordsAnalyzer();
   const techDetector = new TechDetector();
-  const metricsBuilder = new MetricsBuilder();
   const cookieAnalyzer = new CookieAnalyzer();
+  const metricsBuilder = new MetricsBuilder();
+
+  LoggingService.configure({
+    logsDir: config.logsDir,
+    fileName: config.logFileName,
+    level: config.logLevel,
+  });
 
   const screenshotStorage = new LocalScreenshotStorage({
+    screenshotsDir: config.screenshotsDir,
     baseUrl: config.baseUrl,
   });
 
   const screenshotService = new ScreenshotService({
     storage: screenshotStorage,
-  });
-
-  const loggingService = new LoggingService({
-    logsDir: config.logsDir,
-    logFileName: config.logFileName,
   });
 
   const analyzerService = new AnalyzerService({
@@ -50,13 +55,11 @@ function createDefaultDependencies() {
     techDetector,
     cookieAnalyzer,
     metricsBuilder,
-    loggingService,
   });
 
   return {
     browserManager,
     analyzerService,
-    loggingService,
   };
 }
 
@@ -73,6 +76,8 @@ function createApp(overrides = {}) {
 
   app.use(cors());
   app.use(express.json());
+
+  app.use(screenshotsRoutes(dependencies));
 
   app.use("/api/v1", analyzeRoutes(dependencies));
   app.use("/api/v1", healthRoutes(dependencies));
